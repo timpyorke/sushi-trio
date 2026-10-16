@@ -240,20 +240,24 @@ class _FurniturePanelState extends State<FurniturePanel> {
       textAlign: null,
       children: [
         const SizedBox(height: 8),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 6,
-          children: [
-            for (final c in FurnitureCategory.values)
-              ChoiceChip(
-                label: Text(
-                    '${L10n.t('cat_${c.name}')} '
-                    '${state.ownedIn(c)}/${Restaurant.inCategory(c).length}',
-                    style: const TextStyle(color: UiArt.ink)),
-                selected: c == _category,
-                onSelected: (_) => setState(() => _category = c),
-              ),
-          ],
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final c in FurnitureCategory.values)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: ChoiceChip(
+                    label: Text(
+                        '${L10n.t('cat_${c.name}')} '
+                        '${state.ownedIn(c)}/${Restaurant.inCategory(c).length}',
+                        style: const TextStyle(color: UiArt.ink)),
+                    selected: c == _category,
+                    onSelected: (_) => setState(() => _category = c),
+                  ),
+                ),
+            ],
+          ),
         ),
         const SizedBox(height: 8),
         for (final f in Restaurant.inCategory(_category))

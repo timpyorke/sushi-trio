@@ -7,23 +7,32 @@ import '../services/restaurant.dart';
 import 'customer_order.dart';
 import 'ui_art.dart';
 
-/// Where each piece of furniture sits, as fractions of the scene: the sign
-/// on the awning, a wall row, a counter row and a floor row. Customers walk
-/// the lane between the counter and the floor.
-const _spots = {
-  'sign': Offset(0.5, 0.08),
-  'lantern': Offset(0.09, 0.29),
-  'aquarium': Offset(0.26, 0.31),
-  'sake': Offset(0.74, 0.31),
-  'noren': Offset(0.91, 0.29),
-  'luckycat': Offset(0.12, 0.45),
-  'conveyor': Offset(0.37, 0.45),
-  'trophy': Offset(0.88, 0.45),
-  'plant': Offset(0.12, 0.9),
-  'stool': Offset(0.37, 0.9),
-  'taiko': Offset(0.63, 0.9),
-  'kadomatsu': Offset(0.88, 0.9),
+/// Where each piece of furniture sits and how big it is, as fractions of the
+/// scene width/height, matching the background and the sprites: the lantern
+/// and noren hang on the wall, sake and the bonsai stand on the shelf
+/// (its top edge is at 34% of the height), the lucky cat, aquarium, conveyor
+/// and trophy on the counter top (about 49%), and the standing sign,
+/// stool, taiko and kadomatsu stand on the floor. Customers walk the lane
+/// between the counter and the floor. `rest` anchors the bottom edge at y
+/// instead of the centre.
+typedef _Spot = ({double x, double y, double size, bool rest});
+
+const _spots = <String, _Spot>{
+  'lantern': (x: 0.3, y: 0.22, size: 0.13, rest: false),
+  'noren': (x: 0.7, y: 0.22, size: 0.2, rest: false),
+  'sake': (x: 0.11, y: 0.343, size: 0.13, rest: true),
+  'plant': (x: 0.89, y: 0.343, size: 0.15, rest: true),
+  'luckycat': (x: 0.1, y: 0.49, size: 0.13, rest: true),
+  'aquarium': (x: 0.28, y: 0.49, size: 0.24, rest: true),
+  'conveyor': (x: 0.74, y: 0.49, size: 0.26, rest: true),
+  'trophy': (x: 0.9, y: 0.49, size: 0.14, rest: true),
+  'sign': (x: 0.12, y: 0.97, size: 0.26, rest: true),
+  'stool': (x: 0.37, y: 0.97, size: 0.16, rest: true),
+  'taiko': (x: 0.63, y: 0.97, size: 0.22, rest: true),
+  'kadomatsu': (x: 0.88, y: 0.97, size: 0.2, rest: true),
 };
+
+const _fallback = (x: 0.5, y: 0.5, size: 0.18, rest: false);
 
 const _laneY = 0.73;
 
@@ -36,10 +45,25 @@ class RestaurantScene extends ConsumerWidget {
   const RestaurantScene({super.key, required this.onBuy});
   final ValueChanged<FurnitureDef> onBuy;
 
-  static const _slot = 64.0;
+  static const _minSlot = 64.0;
 
-  static Offset _spotOf(FurnitureDef f) =>
-      _spots[f.id] ?? const Offset(0.5, 0.5);
+  Widget _place(FurnitureDef f, double w, double h, bool owned) {
+    final spot = _spots[f.id] ?? _fallback;
+    final icon = spot.size * w;
+    final slot = math.max(icon, _minSlot);
+    return Positioned(
+      left: spot.x * w - slot / 2,
+      top: spot.rest ? spot.y * h - icon / 2 - slot / 2 : spot.y * h - slot / 2,
+      width: slot,
+      height: slot,
+      child: _Slot(
+        furniture: f,
+        owned: owned,
+        iconSize: icon,
+        onBuy: () => onBuy(f),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,17 +96,7 @@ class RestaurantScene extends ConsumerWidget {
                   child: IgnorePointer(child: _RestaurantChef()),
                 ),
                 for (final f in Restaurant.furniture)
-                  Positioned(
-                    left: _spotOf(f).dx * w - _slot / 2,
-                    top: _spotOf(f).dy * h - _slot / 2,
-                    width: _slot,
-                    height: _slot,
-                    child: _Slot(
-                      furniture: f,
-                      owned: state.isOwned(f),
-                      onBuy: () => onBuy(f),
-                    ),
-                  ),
+                  _place(f, w, h, state.isOwned(f)),
                 if (state.placed > 0)
                   Positioned.fill(
                     child: IgnorePointer(
@@ -170,9 +184,13 @@ class _RestaurantChefState extends State<_RestaurantChef>
 
 class _Slot extends StatelessWidget {
   const _Slot(
-      {required this.furniture, required this.owned, required this.onBuy});
+      {required this.furniture,
+      required this.owned,
+      required this.iconSize,
+      required this.onBuy});
   final FurnitureDef furniture;
   final bool owned;
+  final double iconSize;
   final VoidCallback onBuy;
 
   @override
@@ -218,7 +236,7 @@ class _Slot extends StatelessWidget {
             scale: owned ? 1 : 0,
             duration: const Duration(milliseconds: 450),
             curve: Curves.elasticOut,
-            child: UiArt.furniture(furniture.id).sized(44),
+            child: UiArt.furniture(furniture.id).sized(iconSize),
           ),
         ],
       ),
