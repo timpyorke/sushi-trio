@@ -33,9 +33,9 @@ flutter_launcher_icons:
   ios: true
   image_path: assets/icons/app.png
   remove_alpha_ios: true
-  adaptive_icon_background: "#13307F"
+  adaptive_icon_background: "#123F45"
   adaptive_icon_foreground: assets/icons/app_no_bg.png
-  adaptive_icon_foreground_inset: 16
+  adaptive_icon_foreground_inset: 20
 
 # Typed asset references (lib/gen/): `dart run build_runner build`.
 flutter_gen:
