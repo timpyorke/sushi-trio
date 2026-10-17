@@ -14,13 +14,20 @@ class HudBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<HudState>(
       valueListenable: game.hud,
-      builder: (context, s, _) => Row(
-        children: [
-          _Chip(label: L10n.t('moves'), value: '${s.movesLeft}'),
-          const SizedBox(width: 8),
-          Expanded(
-              child: _ScoreStars(score: s.score, thresholds: game.level.stars)),
-        ],
+      builder: (context, s, _) => SizedBox(
+        height: 68,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+                width: 68,
+                child: _Chip(label: L10n.t('moves'), value: '${s.movesLeft}')),
+            const SizedBox(width: 6),
+            Expanded(
+                child:
+                    _ScoreStars(score: s.score, thresholds: game.level.stars)),
+          ],
+        ),
       ),
     );
   }
@@ -31,7 +38,7 @@ class _ScoreStars extends StatelessWidget {
   final int score;
   final List<int> thresholds;
 
-  static const _star = 26.0;
+  static const _star = 22.0;
 
   /// Stars sit at evenly spaced slots, so the bar is piecewise linear between
   /// the score thresholds instead of proportional to the raw score.
@@ -51,17 +58,26 @@ class _ScoreStars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
     final fill = _fillFor(score, thresholds);
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: UiArt.plankDecoration(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('${L10n.t('score')} $score',
-              style: t.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold, color: UiArt.ink)),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text('${L10n.t('score')} $score',
+                  maxLines: 1,
+                  style: const TextStyle(
+                      fontSize: 20,
+                      height: 1.1,
+                      fontWeight: FontWeight.bold,
+                      color: UiArt.ink)),
+            ),
+          ),
           const SizedBox(height: 2),
           LayoutBuilder(builder: (context, box) {
             final w = box.maxWidth - _star;
@@ -77,7 +93,7 @@ class _ScoreStars extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                       child: LinearProgressIndicator(
                         value: fill,
-                        minHeight: 10,
+                        minHeight: 7,
                         backgroundColor: Colors.black26,
                         color: const Color(0xFFFFB300),
                       ),
@@ -105,17 +121,34 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       decoration: UiArt.plankDecoration(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: t.labelSmall?.copyWith(color: UiArt.ink)),
-          Text(value,
-              style: t.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold, color: UiArt.ink)),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label,
+                  maxLines: 1,
+                  style: const TextStyle(fontSize: 11, color: UiArt.ink)),
+            ),
+          ),
+          Flexible(
+            flex: 2,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(value,
+                  maxLines: 1,
+                  style: const TextStyle(
+                      fontSize: 24,
+                      height: 1.1,
+                      fontWeight: FontWeight.bold,
+                      color: UiArt.ink)),
+            ),
+          ),
         ],
       ),
     );

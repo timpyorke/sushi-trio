@@ -96,7 +96,6 @@ class _Home extends ConsumerWidget {
         levelCount: kLevelCount,
         onPlay: (n) => startLevel(context, ref, n),
         onLevels: () => openLevels(context),
-        onRestaurant: () => openRestaurant(context),
         onShop: () => openShop(context),
         onSettings: () => openSettings(context),
       );

@@ -37,6 +37,7 @@ void main() {
     expect(find.text('Sushi Trio'), findsWidgets);
     expect(find.text('Play'), findsOneWidget);
     expect(find.text('Level 1'), findsOneWidget);
+    expect(find.text('My restaurant'), findsNothing);
   });
 
   testWidgets('home opens the daily reward when it is waiting',
@@ -57,6 +58,7 @@ void main() {
     await _openLevels(tester);
 
     expect(find.text('Pick a plate'), findsOneWidget);
+    expect(find.byIcon(Icons.storefront), findsNothing);
     expect(find.byIcon(Icons.lock), findsNWidgets(Restaurant.totalLevels - 1));
   });
 

@@ -5,7 +5,6 @@ import '../services/restaurant.dart';
 import 'game_screen.dart';
 import 'level_select_screen.dart';
 import 'lives_ui.dart';
-import 'restaurant_screen.dart';
 import 'settings_screen.dart';
 import 'shop_screen.dart';
 import 'starter_picker.dart';
@@ -33,9 +32,6 @@ void _open(BuildContext context, Widget screen) =>
 
 void openLevels(BuildContext context) =>
     _open(context, const LevelSelectScreen());
-
-void openRestaurant(BuildContext context) =>
-    _open(context, const RestaurantScreen());
 
 void openShop(BuildContext context) =>
     _open(context, const BoosterShopScreen());

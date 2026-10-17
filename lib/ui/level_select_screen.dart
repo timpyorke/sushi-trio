@@ -32,7 +32,6 @@ class LevelSelectScreen extends ConsumerWidget {
             cleared: cleared,
             stars: restaurant.best,
             onBack: () => Navigator.of(context).maybePop(),
-            onRestaurant: () => openRestaurant(context),
             onShop: () => openShop(context),
             onSettings: () => openSettings(context),
             onSelect: (n) => startLevel(context, ref, n),

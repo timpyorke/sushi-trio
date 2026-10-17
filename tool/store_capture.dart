@@ -5,18 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../lib/core/piece.dart';
-import '../lib/core/settings.dart';
-import '../lib/game/piece_painter.dart';
-import '../lib/gen/fonts.gen.dart';
-import '../lib/main.dart' show SushiTrioApp;
-import '../lib/services/event_config.dart';
-import '../lib/services/restaurant.dart';
-import '../lib/services/store.dart';
-import '../lib/services/wallet.dart';
-import '../lib/ui/game_screen.dart';
-import '../lib/ui/level_select_screen.dart';
-import '../lib/ui/restaurant_screen.dart';
+import 'package:sushi_trio/core/piece.dart';
+import 'package:sushi_trio/core/settings.dart';
+import 'package:sushi_trio/game/piece_painter.dart';
+import 'package:sushi_trio/gen/fonts.gen.dart';
+import 'package:sushi_trio/main.dart' show SushiTrioApp;
+import 'package:sushi_trio/services/event_config.dart';
+import 'package:sushi_trio/services/restaurant.dart';
+import 'package:sushi_trio/services/store.dart';
+import 'package:sushi_trio/services/wallet.dart';
+import 'package:sushi_trio/ui/game_screen.dart';
+import 'package:sushi_trio/ui/level_select_screen.dart';
+import 'package:sushi_trio/ui/restaurant_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

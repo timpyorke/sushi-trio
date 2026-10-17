@@ -20,7 +20,7 @@ class HomeScreen extends ConsumerStatefulWidget {
       required this.levelCount,
       required this.onPlay,
       required this.onLevels,
-      required this.onRestaurant,
+      this.onRestaurant,
       required this.onShop,
       required this.onSettings});
 
@@ -28,7 +28,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 
   /// Called with the level the Play button starts.
   final ValueChanged<int> onPlay;
-  final VoidCallback onLevels, onRestaurant, onShop, onSettings;
+  final VoidCallback onLevels, onShop, onSettings;
+  final VoidCallback? onRestaurant;
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -132,10 +133,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   sprite: const LevelIcon(size: 28),
                                   label: L10n.t('chooseLevel'),
                                   onTap: widget.onLevels),
-                              _ShortcutButton(
-                                  sprite: const MyRestaurantIcon(size: 28),
-                                  label: L10n.t('restaurant'),
-                                  onTap: widget.onRestaurant),
+                              if (widget.onRestaurant != null)
+                                _ShortcutButton(
+                                    sprite: const MyRestaurantIcon(size: 28),
+                                    label: L10n.t('restaurant'),
+                                    onTap: widget.onRestaurant!),
                               _ShortcutButton(
                                   sprite: const ShopIcon(size: 28),
                                   label: L10n.t('shop'),
