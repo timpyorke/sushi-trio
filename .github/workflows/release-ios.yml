@@ -1,0 +1,167 @@
+# Builds the iOS app on a GitHub-hosted Mac and uploads it to TestFlight.
+# Trigger: push a tag like v1.0.0, or run manually from the Actions tab.
+#
+# Required repository secrets (Settings > Secrets and variables > Actions):
+#   ASC_KEY_ID      App Store Connect API key ID
+#   ASC_ISSUER_ID   App Store Connect issuer ID
+#   ASC_KEY_P8      full contents of AuthKey_<ID>.p8 (including BEGIN/END lines)
+#   APPLE_TEAM_ID   10-character Apple Developer Team ID
+name: Release iOS
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      xcode:
+        description: "Xcode version installed on the runner (e.g. 26.1.1)"
+        required: false
+        default: "26.1.1"
+
+concurrency:
+  group: release-ios
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          pip install --quiet pyjwt cryptography requests
+          python - <<'PY'
+          import os, time, jwt, requests
+          kid = os.environ["ASC_KEY_ID"]
+          iss = os.environ["ASC_ISSUER_ID"]
+          pem = os.environ["ASC_KEY_P8"].replace("\r", "").strip() + "\n"
+          print(f"key id: len={len(kid)} stripped={kid == kid.strip()}")
+          print(f"issuer: len={len(iss)} stripped={iss == iss.strip()}")
+          print(f"p8: lines={len(pem.splitlines())} begin={pem.startswith('-----BEGIN PRIVATE KEY-----')} end={pem.strip().endswith('-----END PRIVATE KEY-----')}")
+          now = int(time.time())
+          tok = jwt.encode({"iss": iss.strip(), "iat": now, "exp": now + 600, "aud": "appstoreconnect-v1"},
+                           pem, algorithm="ES256", headers={"kid": kid.strip(), "typ": "JWT"})
+          r = requests.get("https://api.appstoreconnect.apple.com/v1/apps",
+                           headers={"Authorization": f"Bearer {tok}"}, timeout=30)
+          print("GET /apps ->", r.status_code)
+          if r.status_code != 200:
+              print(r.text[:300])
+              raise SystemExit(1)
+          PY
+
+  build:
+    needs: preflight
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        env:
+          XCODE_VERSION: ${{ inputs.xcode || '26.1.1' }}
+        run: |
+          echo "Installed Xcode versions:"
+          ls -d /Applications/Xcode_*.app
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          xcodebuild -version
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze and test
+        run: |
+          flutter analyze
+          flutter test
+
+      - name: Write App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p "$HOME/private_keys"
+          printf '%s\n' "$ASC_KEY_P8" | tr -d '\r' > "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          openssl pkey -in "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8" -noout
+
+      - name: Generate iOS config and pods
+        run: |
+          flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
+
+      - name: Archive (cloud-managed signing)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcodebuild archive \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic
+
+      - name: Export IPA
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            -exportPath "$RUNNER_TEMP/ipa" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      - name: Upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcrun altool --upload-app --type ios \
+            --file "$RUNNER_TEMP"/ipa/*.ipa \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"
+
+      - name: Keep IPA as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: ${{ runner.temp }}/ipa/*.ipa
+          retention-days: 14
+
+      - name: Remove API key
+        if: always()
+        run: rm -rf "$HOME/private_keys"
